@@ -11,6 +11,8 @@ const REST = ["Rest", 0, "Rest, or 20–40 min easy bike (HR 100–115) + streng
 const E = (n, strides) => ["Easy", n, strides ? "Easy run + 4×20 sec strides on flat ground (quick, relaxed — not a sprint)" : "Easy run — conversational"];
 const R = (n) => ["Recovery", n, "Recovery jog — slower than you think"];
 const T = (n, d) => ["Tempo", n, `1 mi easy, ${d} @ tempo, 1 mi easy`];
+// Saturday aerobic bike: steady (not recovery) effort, shorter before the biggest long runs. Optional.
+const B = (mins) => ["Bike", 0, `${mins} min steady bike, HR ~125–140 — conversational. Builds aerobic fitness with zero impact. Optional; skip if legs feel heavy for tomorrow's long run.`, mins];
 // Fartlek instead of track intervals: same aerobic benefit, far less Achilles / plantar load.
 const F = (n, d) => ["Fartlek", n, `1 mi easy, then ${d} comfortably hard with equal easy jogs between. Flat route, smooth form.`];
 const M = (n, mp) => ["MP", n, `1 mi easy, ${mp} mi @ marathon pace, 1 mi easy`];
@@ -25,22 +27,22 @@ const WEEKS = [
   ["Base", "Consistency", [REST, E(4), E(3, 1), E(3), REST, OFF, L(7)]],
   ["Base", "Consistency", [REST, E(4), E(4, 1), E(3), REST, OFF, L(8)]],
   ["Base", "Cutback", [REST, E(3), E(3, 1), E(3), REST, OFF, L(5)]],
-  ["Base", "First tempo", [REST, E(4), T(4, "2 mi"), E(4), REST, OFF, L(9)]],
-  ["Base", "First fartlek", [REST, E(4), F(5, "6×1 min"), E(4), REST, OFF, L(10)]],
+  ["Base", "First tempo", [REST, E(4), T(4, "2 mi"), E(4), REST, B(45), L(9)]],
+  ["Base", "First fartlek", [REST, E(4), F(5, "6×1 min"), E(4), REST, B(45), L(10)]],
   ["Base", "Thanksgiving week", [REST, E(4), T(5, "3 mi"), E(3, 1), REST, R(2), L(11)]],
   ["Base", "Cutback + 10K test", [REST, E(3), OFF, E(3), REST, ["Time Trial", 8, "1 mi warm-up, 10K ALL-OUT time trial, cool-down. Enter your time in Stats."], R(5)]],
-  ["Build", "Tempo build", [REST, E(5), T(6, "4 mi"), E(4), REST, OFF, L(12)]],
-  ["Build", "Fartlek", [REST, E(5), F(6, "8×1 min"), E(5), REST, OFF, L(13)]],
-  ["Build", "Holiday week", [REST, E(5), M(5, 3), E(4), REST, OFF, L(10)]],
-  ["Build", "Tempo build", [REST, E(5), T(7, "2×2.5 mi (3 min jog)"), E(5), REST, OFF, L(14)]],
-  ["Build", "Fartlek + MP finish", [REST, E(6), F(7, "6×2 min"), E(5), REST, OFF, L(15, "easy, last 3 mi @ marathon pace")]],
+  ["Build", "Tempo build", [REST, E(5), T(6, "4 mi"), E(4), REST, B(45), L(12)]],
+  ["Build", "Fartlek", [REST, E(5), F(6, "8×1 min"), E(5), REST, B(45), L(13)]],
+  ["Build", "Holiday week", [REST, E(5), M(5, 3), E(4), REST, B(45), L(10)]],
+  ["Build", "Tempo build", [REST, E(5), T(7, "2×2.5 mi (3 min jog)"), E(5), REST, B(45), L(14)]],
+  ["Build", "Fartlek + MP finish", [REST, E(6), F(7, "6×2 min"), E(5), REST, B(45), L(15, "easy, last 3 mi @ marathon pace")]],
   ["Build", "Cutback + half test", [REST, E(4), E(4, 1), E(3), REST, OFF, ["Time Trial", 13.1, "Half marathon — race it or solo. Full race-morning routine. Enter your time in Stats."]]],
   ["Peak", "MP volume", [REST, E(6), M(7, 5), E(5), REST, R(2), L(16)]],
-  ["Peak", "Tempo + 18", [REST, E(6), T(8, "3×2 mi (3 min jog)"), E(6), REST, OFF, L(18)]],
+  ["Peak", "Tempo + 18", [REST, E(6), T(8, "3×2 mi (3 min jog)"), E(6), REST, B(30), L(18)]],
   ["Peak", "Dress rehearsal", [REST, E(5), F(6, "5×3 min"), E(5), REST, R(2), L(14, "easy, last 8 mi @ marathon pace. Race shoes, kit, fuel.")]],
-  ["Peak", "The 20-miler", [REST, E(6), M(8, 6), E(5), REST, OFF, L(20)]],
-  ["Taper", "Taper 1", [REST, E(5), M(7, 5), E(5), REST, OFF, L(14)]],
-  ["Taper", "Taper 2", [REST, E(5), M(6, 4), E(4), REST, OFF, L(10)]],
+  ["Peak", "The 20-miler", [REST, E(6), M(8, 6), E(5), REST, B(30), L(20)]],
+  ["Taper", "Taper 1", [REST, E(5), M(7, 5), E(5), REST, B(40), L(14)]],
+  ["Taper", "Taper 2", [REST, E(5), M(6, 4), E(4), REST, B(30), L(10)]],
   ["Race", "RACE WEEK", [OFF, E(4, 1), ["MP", 3, "1 mi easy, 1 mi @ goal pace, 1 mi easy"], E(3), OFF, R(2), ["Race", 26.2, "LA MARATHON — Dodger Stadium → Century City. Start at your tier's pace, not faster."]]],
 ];
 
@@ -57,8 +59,8 @@ const daysBetween = (a, b) => Math.round((parseDate(b) - parseDate(a)) / 8640000
 const PLAN_START = fmtKey(addDays(parseDate(RACE_DATE), -DAYS_BEFORE_RACE));
 
 const PLAN = WEEKS.flatMap(([phase, focus, days], wi) =>
-  days.map(([type, miles, desc], di) => ({
-    week: wi + 1, phase, focus, type, miles, desc,
+  days.map(([type, miles, desc, mins], di) => ({
+    week: wi + 1, phase, focus, type, miles, desc, mins,
     date: fmtKey(addDays(parseDate(PLAN_START), wi * 7 + di)),
   }))
 );
@@ -102,6 +104,7 @@ const DEFAULT_STATE = {
   strength: [],  // dates a strength session was done
   checks: {},    // date → { achilles: 0–10, arch: 0–10 }
   shoe: { name: "", start: "2026-10-01" },
+  checklist: {}, // id → true
 };
 function loadState() {
   try {
@@ -140,6 +143,7 @@ function fitness(state) {
   };
 }
 function targetPace(type, fit) {
+  if (type === "Bike") return "HR 125–140";
   if (fit.zones[type]) return `${fmtPace(fit.zones[type][0])}–${fmtPace(fit.zones[type][1])}`;
   if (type === "Time Trial") return "All-out";
   if (type === "Race") return `${fmtPace(fit.goalMp)} goal`;
@@ -160,7 +164,8 @@ function runsByDate(state) {
   }
   return m;
 }
-function dayStatus(p, byDate, today, shields = {}) {
+function dayStatus(p, byDate, today, shields = {}, crossDates = new Set()) {
+  if (p.type === "Bike") return crossDates.has(p.date) ? "done" : p.date > today ? "future" : p.date === today ? "today" : "rest"; // optional: never "missed"
   const a = byDate[p.date]?.miles || 0;
   if (shields[p.date] && a < 0.9 * p.miles) return "shield";
   if (p.date > today) return "future";
@@ -171,9 +176,10 @@ function dayStatus(p, byDate, today, shields = {}) {
 }
 function weekStats(state, today = todayKey()) {
   const byDate = runsByDate(state);
+  const crossDates = new Set(crossOnly(state).map((r) => r.date));
   return WEEKS.map(([phase, focus], wi) => {
     const shields = state.shields || {};
-    const days = PLAN.filter((p) => p.week === wi + 1).map((p) => ({ ...p, actual: byDate[p.date]?.miles || 0, status: dayStatus(p, byDate, today, shields) }));
+    const days = PLAN.filter((p) => p.week === wi + 1).map((p) => ({ ...p, actual: byDate[p.date]?.miles || 0, status: dayStatus(p, byDate, today, shields, crossDates) }));
     const planned = days.reduce((s, d) => s + d.miles, 0);
     // Shielded days are excused: their miles drop out of the target and they never block stars.
     const target = days.reduce((s, d) => s + (d.status === "shield" ? 0 : d.miles), 0);
@@ -209,7 +215,7 @@ const LEVELS = [
   [6000, "Beverly Hills", "Rodeo Drive-level fitness"],
   [8000, "Century City", "Finish line in sight"],
 ];
-const XP = { mile: 10, dayDone: 25, longBonus: 50, qualityBonus: 40, checkpoint: 100, perfectWeek: 100, crossTrain: 15, strength: 20, check: 5 };
+const XP = { mile: 10, dayDone: 25, longBonus: 50, qualityBonus: 40, checkpoint: 100, perfectWeek: 100, crossTrain: 15, strength: 20, check: 5, prep: 10 };
 
 function computeXP(state) {
   const today = todayKey();
@@ -230,6 +236,7 @@ function computeXP(state) {
   xp += Object.values(state.checkpoints).filter(Boolean).length * XP.checkpoint;
   xp += new Set(state.strength || []).size * XP.strength;
   xp += Object.keys(state.checks || {}).length * XP.check;
+  xp += CHECKLIST.filter((c) => state.checklist?.[c.id]).length * XP.prep;
   return xp;
 }
 function levelFor(xp) {
@@ -285,6 +292,7 @@ function badges(state) {
     ["newyear", "🎆", "New Year, New PR", "Run on New Year's Day", onDate("2027-01-01")],
     ["allcp", "📈", "Data Driven", "Complete all 3 checkpoints", !!(c.k5 && c.k10 && c.half)],
     ["sub4pace", "🏎️", "Sub-4 Speed", "Run 3+ mi at 9:09/mi or faster", has((r) => r.miles >= 3 && r.secs && r.secs / r.miles <= state.goalSecs / MARATHON_MI)],
+    ["ready", "🎒", "Race Ready", "Finish the race-day checklist", CHECKLIST.every((c) => state.checklist?.[c.id])],
     ["finisher", "🏅", "Marathoner", "Finish the LA Marathon", !!race],
     ["legend", "👑", "Sub-4 Legend", "Finish under 4:00:00", !!(race && race.secs && race.secs < 4 * 3600)],
   ].map(([id, icon, name, desc, earned]) => ({ id, icon, name, desc, earned }));
@@ -304,3 +312,35 @@ function shoeMiles(state) {
   if (!state.shoe?.start) return 0;
   return runsOnly(state).filter((r) => r.date >= state.shoe.start).reduce((s, r) => s + (+r.miles || 0), 0);
 }
+
+// ---- race-day checklist -------------------------------------------------
+const CHECKLIST = [
+  // Rehearsals during training
+  { id: "sweat", group: "Rehearse in training", when: "By Wk 10", text: "Sweat test: weigh before & after a 60-min run (no drinking). Each lb lost ≈ 16 oz/hr to replace." },
+  { id: "gels", group: "Rehearse in training", when: "Wk 9+", text: "Pick your race gels/chews and use them on every 10+ mi run" },
+  { id: "shoes", group: "Rehearse in training", when: "By early Jan", text: "Race shoes bought — same drop as your current pair" },
+  { id: "caffeine", group: "Rehearse in training", when: "Wk 12–16", text: "Caffeine trial (~200–230 mg, 45–60 min before) on a long run — note how your stomach handles it" },
+  { id: "half", group: "Rehearse in training", when: "Wk 14", text: "Half marathon in race shoes with full race-morning routine" },
+  { id: "tier", group: "Rehearse in training", when: "Wk 14", text: "Commit to your goal tier (A / B / C) from the half result" },
+  { id: "fuel60", group: "Rehearse in training", when: "Wk 15–18", text: "Hit 60+ g carbs/hr on a 16+ mi long run without stomach issues" },
+  { id: "dress", group: "Rehearse in training", when: "Wk 17", text: "Dress rehearsal: race kit, shoes, breakfast, fuel, caffeine — nothing new on race day" },
+  // Race week
+  { id: "logistics", group: "Race week", when: "Mon–Wed", text: "Confirm bib pickup (expo) and how you'll get to the 7:00 a.m. start — it's point-to-point, so plan the ride home too" },
+  { id: "weather", group: "Race week", when: "Wed", text: "Check the forecast. If it's 65°F+ at the finish, plan to start 10–20 sec/mi slower" },
+  { id: "nails", group: "Race week", when: "Wed", text: "Trim toenails" },
+  { id: "carbload", group: "Race week", when: "Thu–Sat", text: "Carb load: ~620–775 g/day, low fat & fiber, familiar foods" },
+  { id: "kit", group: "Race week", when: "Sat night", text: "Lay out: bib + pins, shoes, socks, watch charged, gels counted, caffeine, anti-chafe, throwaway layer" },
+  { id: "alarm", group: "Race week", when: "Sat night", text: "Two alarms set — breakfast 2.5–3 hrs before the start" },
+  // Race morning
+  { id: "breakfast", group: "Race morning", when: "−3 hrs", text: "Practiced breakfast (e.g. pandesal + PB + banana) and ~16 oz fluid" },
+  { id: "caf", group: "Race morning", when: "−45 min", text: "Caffeine (if it passed your trial)" },
+  { id: "bathroom", group: "Race morning", when: "−30 min", text: "Bathroom line early; gel #1 ~15 min before the start" },
+];
+const RACE_PLAN = [
+  ["🧭", "Miles 1–10", "At or slightly slower than tier pace. Run the hills by effort, not pace. Bank energy, not time."],
+  ["🍬", "Fuel", "A gel every 30–40 min from the start (60–90 g carbs/hr). Drink to your sweat-test number."],
+  ["📐", "Tangents", "Run the shortest line through every turn — it's worth 2–3 minutes."],
+  ["👥", "Miles 10–20", "Settle in, use a pace group if one matches your tier. Stay patient."],
+  ["🔥", "Mile 20+", "Now you race. Pick people off. Nothing new — just keep fueling."],
+  ["🦶", "If the Achilles or arch talks", "Shorten your stride and add walk breaks — run/walk got you here."],
+];

@@ -3,11 +3,11 @@
 const TYPE_COLOR = {
   Rest: "var(--t-rest)", Easy: "var(--t-easy)", Recovery: "var(--t-recovery)", Long: "var(--t-long)",
   Tempo: "var(--t-tempo)", Fartlek: "var(--t-intervals)", Intervals: "var(--t-intervals)", MP: "var(--t-mp)", "Time Trial": "var(--t-tt)",
-  Race: "var(--t-race)", "Cross-train": "#8C9AC4",
+  Race: "var(--t-race)", "Cross-train": "#8C9AC4", Bike: "#8C9AC4",
 };
 const TYPE_ICON = {
   Rest: "😴", Easy: "🏃", Recovery: "🚶", Long: "🛣️", Tempo: "⚡", Fartlek: "💨", Intervals: "🔥", MP: "🎯",
-  "Time Trial": "⏱️", Race: "🏁", "Cross-train": "🚴",
+  "Time Trial": "⏱️", Race: "🏁", "Cross-train": "🚴", Bike: "🚴",
 };
 const LOG_TYPES = ["Easy", "Long", "Tempo", "Fartlek", "MP", "Recovery", "Time Trial", "Race", "Cross-train"];
 const EFFORT = ["", "Barely moving", "Very easy", "Easy", "Comfortable", "Steady", "Moderate", "Hard-ish", "Hard", "Very hard", "All-out"];
@@ -114,23 +114,25 @@ function viewToday() {
     main = `<section class="card"><div class="h2">The plan is complete 🏅</div><p class="muted" style="margin-top:6px">Recover, then pick the next one.</p></section>`;
   } else {
     const done = byDate[today]?.miles || 0;
-    const complete = p.miles > 0 && done >= 0.9 * p.miles;
+    const isBike = p.type === "Bike";
+    const bikeMins = crossOnly(state).filter((r) => r.date === today).reduce((s, r) => s + (r.secs || 0) / 60, 0);
+    const complete = isBike ? bikeMins > 0 : p.miles > 0 && done >= 0.9 * p.miles;
     const shield = state.shields?.[today];
     const pace = targetPace(p.type, fit);
     main = `
     <section class="card workout">
       <div class="row between">${pill(p.type)}<span class="muted" style="font-size:13px;font-weight:700">Week ${p.week} · ${esc(p.phase)}</span></div>
       <div style="margin:14px 0 6px" class="eyebrow">Today · ${prettyDate(today)}</div>
-      ${p.miles ? `<div class="big num">${fmtMi(p.miles)}<small>mi</small></div>` : `<div class="big">Rest</div>`}
+      ${isBike ? `<div class="big num">${p.mins}<small>min bike</small></div>` : p.miles ? `<div class="big num">${fmtMi(p.miles)}<small>mi</small></div>` : `<div class="big">Rest</div>`}
       <p style="margin:10px 0 14px; line-height:1.45">${esc(p.desc)}</p>
-      ${pace ? `<div class="pace-box"><span style="font-size:20px">⏱️</span><div><div class="muted" style="font-size:12px;font-weight:700">TARGET PACE / MI</div><b class="num" style="font-size:18px">${pace}</b></div></div>` : ""}
+      ${pace ? `<div class="pace-box"><span style="font-size:20px">${isBike ? "❤️" : "⏱️"}</span><div><div class="muted" style="font-size:12px;font-weight:700">${isBike ? "TARGET HEART RATE" : "TARGET PACE / MI"}</div><b class="num" style="font-size:18px">${pace}</b></div></div>` : ""}
       <div style="margin-top:14px">
         ${complete
-          ? `<div class="done-banner">✅ Done — ${fmtMi(done)} mi logged. Nice work.</div>`
+          ? `<div class="done-banner">✅ Done — ${isBike ? `${Math.round(bikeMins)} min on the bike` : `${fmtMi(done)} mi logged`}. Nice work.</div>`
           : shield
             ? `<div class="shield-banner"><span>🛡️ Shield day · ${esc(shield)}. Rest up — your streak is safe.</span><button class="btn small ghost" data-action="unshield">Undo</button></div>`
-          : p.miles
-            ? `<button class="btn" data-action="log-today">Log today's run</button>`
+          : p.miles || isBike
+            ? `<button class="btn" data-action="log-today">${isBike ? "Log bike session" : "Log today's run"}</button>`
             : `<p class="muted" style="font-size:14px">Recovery is training. Easy bike at HR 100–115, then strength (log it below).</p>`}
       </div>
     </section>`;
@@ -147,7 +149,7 @@ function viewToday() {
         ${w.days.map((d, i) => `
           <div class="dayc ${d.date === today ? "is-today" : ""}">
             <span>${DOW[i][0]}</span>
-            <div class="dot ${d.date === today && d.status !== "done" ? "today" : d.status}" title="${esc(d.type)}">${d.status === "done" ? "✓" : d.status === "shield" ? "🛡" : d.miles ? fmtMi(d.miles) : "–"}</div>
+            <div class="dot ${d.date === today && d.status !== "done" ? "today" : d.status}" title="${esc(d.type)}">${d.status === "done" ? "✓" : d.status === "shield" ? "🛡" : d.type === "Bike" ? "🚴" : d.miles ? fmtMi(d.miles) : "–"}</div>
           </div>`).join("")}
       </div>
       <div class="progress" style="margin-top:14px"><i style="width:${Math.min(100, Math.round(w.pct * 100))}%"></i></div>
@@ -160,11 +162,21 @@ function viewToday() {
   const next = tomorrow ? `
     <section class="card flush"><div class="list">
       <div class="li"><div class="ic" style="background:${TYPE_COLOR[tomorrow.type]}22">${TYPE_ICON[tomorrow.type]}</div>
-        <div class="grow"><div class="eyebrow">Tomorrow</div><div class="title">${tomorrow.miles ? `${fmtMi(tomorrow.miles)} mi · ` : ""}${esc(tomorrow.type === "MP" ? "Marathon pace" : tomorrow.type)}</div>
+        <div class="grow"><div class="eyebrow">Tomorrow</div><div class="title">${tomorrow.type === "Bike" ? `${tomorrow.mins} min · ` : tomorrow.miles ? `${fmtMi(tomorrow.miles)} mi · ` : ""}${esc(tomorrow.type === "MP" ? "Marathon pace" : tomorrow.type)}</div>
         <div class="sub">${esc(tomorrow.desc)}</div></div></div>
     </div></section>` : "";
 
-  return `${heroCard(xp, lvl, streak)}${p ? careCard(today, w) : ""}${main}${weekCard}${next}`;
+  const prepDone = CHECKLIST.filter((c) => state.checklist?.[c.id]).length;
+  const nextPrep = CHECKLIST.find((c) => !state.checklist?.[c.id]);
+  const prep = p && p.week >= 10 && nextPrep ? `
+    <section class="card flush"><div class="list">
+      <button class="li" data-action="checklist">
+        <div class="ic" style="background:rgba(192,76,253,.18)">🏁</div>
+        <div class="grow"><div class="eyebrow">Race prep · ${prepDone}/${CHECKLIST.length}</div><div class="title">${esc(nextPrep.when)}</div><div class="sub">${esc(nextPrep.text)}</div></div>
+        <div class="right muted">›</div>
+      </button>
+    </div></section>` : "";
+  return `${heroCard(xp, lvl, streak)}${p ? careCard(today, w) : ""}${main}${prep}${weekCard}${next}`;
 }
 
 function careCard(today, w) {
@@ -203,7 +215,10 @@ function careCard(today, w) {
 
 function viewJourney() {
   const weeks = weekStats(state);
-  let html = `<div><div class="eyebrow">21 weeks · Oct 12 → Mar 7</div><div class="h1">The Road to LA</div></div><div class="path">`;
+  const prepDone = CHECKLIST.filter((c) => state.checklist?.[c.id]).length;
+  let html = `<div><div class="eyebrow">21 weeks · Oct 12 → Mar 7</div><div class="h1">The Road to LA</div></div>
+    <button class="btn ghost" data-action="checklist">🏁 Race-day checklist · ${prepDone}/${CHECKLIST.length}</button>
+    <div class="path">`;
   let lastPhase = "";
   weeks.forEach((w, i) => {
     if (w.phase !== lastPhase) {
@@ -372,6 +387,53 @@ function shoeCard() {
     </section>`;
 }
 
+function openChecklist() {
+  const groups = [...new Set(CHECKLIST.map((c) => c.group))];
+  const done = CHECKLIST.filter((c) => state.checklist?.[c.id]).length;
+  openSheet(`
+    <div class="row between" style="margin-bottom:8px">
+      <div><div class="eyebrow">LA Marathon · Sun Mar 7, 7:00 a.m.</div><div class="h2" style="font-size:20px">Race-day checklist</div></div>
+      <b class="num">${done}/${CHECKLIST.length}</b>
+    </div>
+    <div class="progress" style="margin-bottom:6px"><i style="width:${Math.round((done / CHECKLIST.length) * 100)}%;background:var(--sunset)"></i></div>
+    <p class="muted" style="font-size:12px">+${XP.prep} XP per item · finish them all for the 🎒 Race Ready badge</p>
+    ${groups.map((g) => `
+      <div class="eyebrow" style="margin:16px 0 4px">${esc(g)}</div>
+      <div class="list">
+        ${CHECKLIST.filter((c) => c.group === g).map((c) => `
+          <label class="li check-li" style="padding-left:0;padding-right:0">
+            <input type="checkbox" data-check="${c.id}" ${state.checklist?.[c.id] ? "checked" : ""} />
+            <div class="grow"><div class="sub" style="white-space:normal;color:var(--text);font-size:14px">${esc(c.text)}</div></div>
+            <span class="when">${esc(c.when)}</span>
+          </label>`).join("")}
+      </div>`).join("")}
+    <div class="eyebrow" style="margin:18px 0 4px">Race plan</div>
+    <div class="list">
+      ${RACE_PLAN.map(([em, t, d]) => `
+        <div class="li" style="padding-left:0;padding-right:0"><div class="ic" style="background:var(--surface-2)">${em}</div>
+          <div class="grow"><div class="title">${esc(t)}</div><div class="sub" style="white-space:normal">${esc(d)}</div></div></div>`).join("")}
+    </div>
+    <button class="btn ghost" style="margin-top:14px" data-action="close">Close</button>`);
+  document.querySelectorAll("#sheet [data-check]").forEach((cb) => cb.addEventListener("change", () => {
+    const id = cb.dataset.check, on = cb.checked;
+    const before = snapshot();
+    state.checklist = { ...(state.checklist || {}), [id]: on };
+    if (!on) delete state.checklist[id];
+    saveState(state);
+    const after = snapshot();
+    // Keep the sheet open: refresh it in place, celebrate only the badge.
+    const scroll = $("#sheet").scrollTop;
+    openChecklist();
+    $("#sheet").scrollTop = scroll;
+    render();
+    if (after.xp > before.xp) toast(`+${after.xp - before.xp} XP`);
+    if (after.earned.includes("ready") && !state.seenBadges.includes("ready")) {
+      state.seenBadges = after.earned; saveState(state);
+      celebrate([{ em: "🎒", title: "Badge unlocked: Race Ready", desc: "Everything's rehearsed. Trust the training." }]);
+    }
+  }));
+}
+
 function openShield() {
   openSheet(`
     <div class="celebrate" style="gap:8px">
@@ -475,7 +537,7 @@ function openWeek(n) {
       ${w.days.map((d, i) => `
         <div class="li" style="padding-left:0;padding-right:0">
           <div class="ic" style="background:${TYPE_COLOR[d.type]}22">${TYPE_ICON[d.type]}</div>
-          <div class="grow"><div class="title">${DOW[i]} ${prettyDate(d.date, { month: "short", day: "numeric" })} · ${d.miles ? fmtMi(d.miles) + " mi" : "Rest"}</div>
+          <div class="grow"><div class="title">${DOW[i]} ${prettyDate(d.date, { month: "short", day: "numeric" })} · ${d.type === "Bike" ? `Bike ${d.mins} min` : d.miles ? fmtMi(d.miles) + " mi" : "Rest"}</div>
             <div class="sub" style="white-space:normal">${esc(d.desc)}${targetPace(d.type, fit) ? ` · <b style="color:var(--text)">${targetPace(d.type, fit)}</b>` : ""}</div></div>
           <div class="right" style="font-size:18px">${{ done: "✅", partial: "🟡", missed: "❌", bonus: "⭐", today: "👉", rest: "", future: "", shield: "🛡️" }[d.status]}</div>
         </div>`).join("")}
@@ -491,7 +553,8 @@ function openLog(run, preset) {
     date: preset?.date || today,
     type: preset?.type || defaultType,
     miles: preset?.miles ?? (plan && plan.miles ? plan.miles : ""),
-    secs: null, hr: null, effort: defaultType === "Cross-train" ? 2 : 4, notes: "",
+    secs: !preset && plan?.type === "Bike" ? plan.mins * 60 : null, hr: null,
+    effort: defaultType === "Cross-train" ? (plan?.type === "Bike" ? 4 : 2) : 4, notes: "",
   };
   const cross0 = r.type === "Cross-train";
   const h = r.secs && !cross0 ? Math.floor(r.secs / 3600) : "", m = r.secs && !cross0 ? Math.floor((r.secs % 3600) / 60) : "", s = r.secs && !cross0 ? r.secs % 60 : "";
@@ -537,9 +600,15 @@ function openLog(run, preset) {
     const mi = parseFloat($("#f-miles").value), sec = secsNow();
     $("#pace-live").innerHTML = `Pace: <b>${mi > 0 && sec > 0 ? fmtPace(sec / mi) + " /mi" : "—"}</b>`;
     const hr = +$("#f-hr").value;
-    $("#hr-live").innerHTML = !hr ? "Recovery band: <b>100–115 bpm</b> · +" + XP.crossTrain + " XP (once per day)"
-      : hr <= 115 ? "✅ <b>In your recovery band</b> — true active flush"
-      : "⚠️ <b>Above 115</b> — that's a workout, not recovery. Ease off next time.";
+    const steady = PLAN_BY_DATE[$("#f-date").value]?.type === "Bike";
+    $("#hr-live").innerHTML = steady
+      ? (!hr ? "Steady ride: <b>125–140 bpm</b> · +" + XP.crossTrain + " XP"
+        : hr < 125 ? "✅ Easy side of steady — fine for the day before a long run"
+        : hr <= 140 ? "✅ <b>Right in the steady band</b>"
+        : "⚠️ <b>Above 140</b> — too hard the day before a long run")
+      : (!hr ? "Recovery band: <b>100–115 bpm</b> · +" + XP.crossTrain + " XP (once per day)"
+        : hr <= 115 ? "✅ <b>In your recovery band</b> — true active flush"
+        : "⚠️ <b>Above 115</b> — that's a workout, not recovery. Ease off next time.");
   };
   form.addEventListener("input", update);
   update();
@@ -646,6 +715,7 @@ function bindView() {
     });
   });
   view.querySelector("[data-action=shield]")?.addEventListener("click", openShield);
+  view.querySelectorAll("[data-action=checklist]").forEach((b) => b.addEventListener("click", openChecklist));
   view.querySelectorAll("[data-action=unshield]").forEach((b) => b.addEventListener("click", () => {
     commit(() => { const s = { ...(state.shields || {}) }; delete s[today]; state.shields = s; });
   }));

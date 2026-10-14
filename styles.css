@@ -238,3 +238,9 @@ input[type=range] { width: 100%; accent-color: var(--sun-2); }
 .hc.none { background: var(--surface-2); }
 .hc.good { background: var(--good); } .hc.warn { background: var(--warn); } .hc.bad { background: var(--bad); color: #fff; }
 .hd { font-size: 10px; color: var(--faint); text-align: center; }
+
+/* ---------- checklist ---------- */
+.check-li { cursor: pointer; align-items: flex-start; }
+.check-li input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--sun-2); flex: none; }
+.check-li:has(input:checked) .sub { color: var(--muted) !important; text-decoration: line-through; }
+.when { font-size: 11px; font-weight: 750; color: var(--muted); white-space: nowrap; padding: 3px 8px; border-radius: 99px; background: var(--surface-2); }

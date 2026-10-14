@@ -274,7 +274,7 @@ function viewStats() {
   const tiers = [["A", "Stretch", state.goalSecs], ["B", "Realistic", state.tierB], ["C", "Floor", state.tierC]];
   const gap = fit.gapMin;
   const cps = [
-    ["k5", "5K time trial", "Week 1", false],
+    ["k5", "5K time trial", "Week 4", false],
     ["k10", "10K time trial", "Week 8", false],
     ["half", "Half marathon", "Week 14", true],
   ];
@@ -287,7 +287,7 @@ function viewStats() {
         <div class="h1 num" style="font-size:40px">${fmtDuration(fit.predicted, true)}</div>
         <div class="right"><b class="num" style="color:${gap <= 0 ? "var(--good)" : "var(--warn)"}">${gap <= 0 ? `${Math.round(-gap)} min under` : `${Math.round(gap)} min to go`}</b><div class="muted" style="font-size:12px">vs. sub-4</div></div>
       </div>
-      ${fit.source === "Starting estimate" ? `<p class="muted" style="font-size:13px;margin-bottom:10px">⚠️ A placeholder guess until you run the Week 1 5K.</p>` : ""}
+      ${fit.source === "Starting estimate" ? `<p class="muted" style="font-size:13px;margin-bottom:10px">⚠️ A placeholder guess until you run the Week 4 5K (Nov 7).</p>` : ""}
       <div class="tier-row" style="margin-top:10px">
         ${tiers.map(([k, n, s]) => `<div class="tier ${fit.tier === k ? "on" : ""}"><b>${k} · ${fmtDuration(s + (k === "C" ? 1 : 0), true).replace(/:00$/, "")}</b><span>${n} · ${fmtPace(s / MARATHON_MI)}/mi</span></div>`).join("")}
       </div>

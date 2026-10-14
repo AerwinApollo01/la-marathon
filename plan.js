@@ -23,10 +23,10 @@ const L = (n, extra) => {
 };
 
 const WEEKS = [
-  ["Base", "Baseline 5K test", [OFF, E(4), OFF, E(3), OFF, ["Time Trial", 4, "1 mi warm-up, 5K ALL-OUT time trial, cool-down. Enter your time in Stats."], L(5)]],
-  ["Base", "Consistency", [REST, E(4), E(3, 1), E(3), REST, OFF, L(7)]],
-  ["Base", "Consistency", [REST, E(4), E(4, 1), E(3), REST, OFF, L(8)]],
-  ["Base", "Cutback", [REST, E(3), E(3, 1), E(3), REST, OFF, L(5)]],
+  ["Base", "Getting started", [OFF, E(4), OFF, E(3), OFF, ["Easy", 4, "4 mi easy, last mile at a steady, comfortably firm effort (~6/10) — a gentle first taste of faster running"], L(5)]],
+  ["Base", "Wake up speed", [REST, E(4), E(3, 1), E(3, 1), REST, OFF, L(7)]],
+  ["Base", "Wake up speed", [REST, E(4), E(4, 1), E(3, 1), REST, OFF, L(8)]],
+  ["Base", "Cutback + 5K test", [REST, E(3), E(3, 1), OFF, REST, ["Time Trial", 4, "1 mi warm-up + Achilles prep (2×15 slow calf raises, 4 building strides), then 5K at 8–9/10 effort — not all-out. Any Achilles/arch pain over 3/10 → make it an easy run and retest later. Enter your time in Stats."], L(5)]],
   ["Base", "First tempo", [REST, E(4), T(4, "2 mi"), E(4), REST, B(45), L(9)]],
   ["Base", "First fartlek", [REST, E(4), F(5, "6×1 min"), E(4), REST, B(45), L(10)]],
   ["Base", "Thanksgiving week", [REST, E(4), T(5, "3 mi"), E(3, 1), REST, R(2), L(11)]],
@@ -47,7 +47,7 @@ const WEEKS = [
 ];
 
 const QUALITY = new Set(["Tempo", "Fartlek", "Intervals", "MP", "Time Trial"]);
-const WEEK_ICON = { 1: "🎯", 8: "🎯", 14: "🎯", 18: "⛰️", 21: "🏁" };
+const WEEK_ICON = { 4: "🎯", 8: "🎯", 14: "🎯", 18: "⛰️", 21: "🏁" };
 
 // ---- dates (local, no TZ drift) ----------------------------------------
 const parseDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
@@ -96,7 +96,7 @@ const DEFAULT_STATE = {
   goalSecs: 4 * 3600,
   tierB: 4.5 * 3600,
   tierC: 5 * 3600 - 1,
-  estimate5k: 31 * 60, // placeholder until the Week 1 time trial
+  estimate5k: 31 * 60, // placeholder until the Week 4 time trial
   checkpoints: { k5: null, k10: null, half: null },
   seenBadges: null, // null = first load: don't celebrate history
   lastLevel: null,
@@ -125,7 +125,7 @@ const riegel = (secs, fromMi, toMi) => secs * Math.pow(toMi / fromMi, RIEGEL);
 function fitness(state) {
   const c = state.checkpoints;
   let source = "Starting estimate", basis = riegel(state.estimate5k, CP.k5, MARATHON_MI);
-  if (c.k5) { source = "Week 1 5K"; basis = riegel(c.k5, CP.k5, MARATHON_MI); }
+  if (c.k5) { source = "Week 4 5K"; basis = riegel(c.k5, CP.k5, MARATHON_MI); }
   if (c.k10) { source = "Week 8 10K"; basis = riegel(c.k10, CP.k10, MARATHON_MI); }
   if (c.half) { source = "Week 14 half"; basis = riegel(c.half, CP.half, MARATHON_MI); }
   const mp = basis / MARATHON_MI;
@@ -271,7 +271,7 @@ function badges(state) {
   const c = state.checkpoints;
   return [
     ["first", "👟", "First Steps", "Log your first run", runs.length > 0],
-    ["baseline", "🎯", "Baseline", "Enter your Week 1 5K", !!c.k5],
+    ["baseline", "🎯", "Baseline", "Enter your Week 4 5K", !!c.k5],
     ["quality", "⚡", "Speed Demon", "Log a tempo or fartlek run", has((r) => ["Tempo", "Fartlek", "Intervals"].includes(r.type))],
     ["ten", "🔟", "Double Digits", "Run 10+ miles", longest >= 10],
     ["half", "🌗", "Half Way There", "Run 13.1+ miles", longest >= 13.1],

@@ -602,10 +602,10 @@ function openLog(run, preset) {
     const hr = +$("#f-hr").value;
     const steady = PLAN_BY_DATE[$("#f-date").value]?.type === "Bike";
     $("#hr-live").innerHTML = steady
-      ? (!hr ? "Steady ride: <b>125–140 bpm</b> · +" + XP.crossTrain + " XP"
-        : hr < 125 ? "✅ Easy side of steady — fine for the day before a long run"
-        : hr <= 140 ? "✅ <b>Right in the steady band</b>"
-        : "⚠️ <b>Above 140</b> — too hard the day before a long run")
+      ? (!hr ? "Steady ride: <b>120–135 bpm</b> · +" + XP.crossTrain + " XP"
+        : hr < 120 ? "✅ Easy side of steady — fine for the day before a long run"
+        : hr <= 135 ? "✅ <b>Right in the steady band</b>"
+        : "⚠️ <b>Above 135</b> — drop the resistance, spin faster")
       : (!hr ? "Recovery band: <b>100–115 bpm</b> · +" + XP.crossTrain + " XP (once per day)"
         : hr <= 115 ? "✅ <b>In your recovery band</b> — true active flush"
         : "⚠️ <b>Above 115</b> — that's a workout, not recovery. Ease off next time.");

@@ -1,5 +1,5 @@
 // Network-first for app files so updates land immediately; cache fallback for offline.
-const CACHE = "road-to-la-v5";
+const CACHE = "road-to-la-v6";
 const SHELL = ["./", "index.html", "styles.css", "plan.js", "app.js", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 

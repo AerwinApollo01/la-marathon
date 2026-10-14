@@ -12,7 +12,7 @@ const E = (n, strides) => ["Easy", n, strides ? "Easy run + 4×20 sec strides on
 const R = (n) => ["Recovery", n, "Recovery jog — slower than you think"];
 const T = (n, d) => ["Tempo", n, `1 mi easy, ${d} @ tempo, 1 mi easy`];
 // Saturday aerobic bike: steady (not recovery) effort, shorter before the biggest long runs. Optional.
-const B = (mins) => ["Bike", 0, `${mins} min steady bike, HR ~125–140 — conversational. Builds aerobic fitness with zero impact. Optional; skip if legs feel heavy for tomorrow's long run.`, mins];
+const B = (mins) => ["Bike", 0, `${mins} min steady bike, HR ~120–135 (Zone 2, ~63–71% of your ~190 max) — conversational, light resistance, 80–95 rpm. Builds aerobic fitness with zero impact. Optional; skip if legs feel heavy for tomorrow's long run.`, mins];
 // Fartlek instead of track intervals: same aerobic benefit, far less Achilles / plantar load.
 const F = (n, d) => ["Fartlek", n, `1 mi easy, then ${d} comfortably hard with equal easy jogs between. Flat route, smooth form.`];
 const M = (n, mp) => ["MP", n, `1 mi easy, ${mp} mi @ marathon pace, 1 mi easy`];
@@ -143,7 +143,7 @@ function fitness(state) {
   };
 }
 function targetPace(type, fit) {
-  if (type === "Bike") return "HR 125–140";
+  if (type === "Bike") return "HR 120–135";
   if (fit.zones[type]) return `${fmtPace(fit.zones[type][0])}–${fmtPace(fit.zones[type][1])}`;
   if (type === "Time Trial") return "All-out";
   if (type === "Race") return `${fmtPace(fit.goalMp)} goal`;

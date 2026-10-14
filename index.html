@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Road to LA</title>
+  <meta name="description" content="LA Marathon 2027 training — sub-4 quest" />
+  <meta name="theme-color" content="#0B1020" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Road to LA" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="view" class="view" aria-live="polite"></main>
+
+  <button id="fab" class="fab" aria-label="Log a run">＋</button>
+
+  <nav class="tabbar" aria-label="Sections">
+    <button data-tab="today" class="active"><span>🏠</span>Today</button>
+    <button data-tab="journey"><span>🗺️</span>Journey</button>
+    <button data-tab="runs"><span>📝</span>Runs</button>
+    <button data-tab="stats"><span>📊</span>Stats</button>
+    <button data-tab="trophies"><span>🏆</span>Trophies</button>
+  </nav>
+
+  <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+  <section id="sheet" class="sheet" hidden role="dialog" aria-modal="true"></section>
+  <div id="toast" class="toast" hidden></div>
+  <canvas id="confetti" class="confetti"></canvas>
+
+  <script src="plan.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

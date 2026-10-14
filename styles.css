@@ -214,3 +214,27 @@ input[type=range] { width: 100%; accent-color: var(--sun-2); }
 @keyframes pop { from { transform: scale(.2) rotate(-20deg); } }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- health ---------- */
+.pain-row { display: grid; grid-template-columns: 82px 1fr 26px; gap: 10px; align-items: center; padding: 6px 0; font-size: 14px; font-weight: 700; }
+.pain-val { text-align: right; font-size: 17px; }
+.advice { margin-top: 8px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 650; line-height: 1.4; }
+.advice.good { background: rgba(61,220,151,.12); color: var(--good); }
+.advice.warn { background: rgba(255,176,32,.12); color: var(--warn); }
+.advice.bad { background: rgba(255,90,110,.12); color: var(--bad); }
+.care-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.care-btn { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; text-align: left;
+  padding: 10px 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+.care-btn span { grid-row: span 2; font-size: 22px; }
+.care-btn b { font-size: 14px; } .care-btn small { font-size: 11px; color: var(--muted); }
+.care-btn.on { border-color: var(--good); background: rgba(61,220,151,.1); }
+.care-btn.on.shield { border-color: var(--planned); background: rgba(91,127,217,.15); }
+.shield-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px;
+  background: rgba(91,127,217,.15); border: 1px solid rgba(91,127,217,.45); font-weight: 750; font-size: 14px; }
+.dot.shield { border-color: var(--planned); background: rgba(91,127,217,.2); }
+.hgrid { display: grid; grid-template-columns: 62px repeat(14, 1fr); gap: 3px; align-items: center; }
+.hl { font-size: 11px; font-weight: 700; color: var(--muted); }
+.hc { display: grid; place-items: center; aspect-ratio: 1; border-radius: 5px; font-size: 10px; font-style: normal; font-weight: 800; color: #0B1020; }
+.hc.none { background: var(--surface-2); }
+.hc.good { background: var(--good); } .hc.warn { background: var(--warn); } .hc.bad { background: var(--bad); color: #fff; }
+.hd { font-size: 10px; color: var(--faint); text-align: center; }

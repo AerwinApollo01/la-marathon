@@ -7,13 +7,18 @@ const DAYS_BEFORE_RACE = 146; // Monday of week 1 (Oct 12, 2026)
 
 // ---- workout builders -------------------------------------------------
 const OFF = ["Rest", 0, "Rest day"];
-const REST = ["Rest", 0, "Rest, or 30–40 min easy cross-training + 20 min strength"];
-const E = (n, strides) => ["Easy", n, strides ? "Easy run + 4×20 sec strides (quick, relaxed)" : "Easy run — conversational"];
+const REST = ["Rest", 0, "Rest, or 20–40 min easy bike (HR 100–115) + strength: calf raises (straight & bent knee), hips, core"];
+const E = (n, strides) => ["Easy", n, strides ? "Easy run + 4×20 sec strides on flat ground (quick, relaxed — not a sprint)" : "Easy run — conversational"];
 const R = (n) => ["Recovery", n, "Recovery jog — slower than you think"];
 const T = (n, d) => ["Tempo", n, `1 mi easy, ${d} @ tempo, 1 mi easy`];
-const I = (n, d) => ["Intervals", n, `1 mi easy, ${d} @ interval pace, 1 mi easy`];
+// Fartlek instead of track intervals: same aerobic benefit, far less Achilles / plantar load.
+const F = (n, d) => ["Fartlek", n, `1 mi easy, then ${d} comfortably hard with equal easy jogs between. Flat route, smooth form.`];
 const M = (n, mp) => ["MP", n, `1 mi easy, ${mp} mi @ marathon pace, 1 mi easy`];
-const L = (n, extra) => ["Long", n, extra ? `Long run — ${extra}` : n >= 10 ? "Long run, easy. Gel every ~40 min — practice race fueling" : "Long run, easy"];
+const L = (n, extra) => {
+  let d = extra ? `Long run — ${extra}` : n >= 10 ? "Long run, easy. Gel every ~40 min — practice race fueling" : "Long run, easy";
+  if (n >= 14) d += ". Run/walk (9 min run : 1 min walk) is encouraged.";
+  return ["Long", n, d];
+};
 
 const WEEKS = [
   ["Base", "Baseline 5K test", [OFF, E(4), OFF, E(3), OFF, ["Time Trial", 4, "1 mi warm-up, 5K ALL-OUT time trial, cool-down. Enter your time in Stats."], L(5)]],
@@ -21,25 +26,25 @@ const WEEKS = [
   ["Base", "Consistency", [REST, E(4), E(4, 1), E(3), REST, OFF, L(8)]],
   ["Base", "Cutback", [REST, E(3), E(3, 1), E(3), REST, OFF, L(5)]],
   ["Base", "First tempo", [REST, E(4), T(4, "2 mi"), E(4), REST, OFF, L(9)]],
-  ["Base", "First intervals", [REST, E(4), I(5, "5×800m (400m jog)"), E(4), REST, OFF, L(10)]],
+  ["Base", "First fartlek", [REST, E(4), F(5, "6×1 min"), E(4), REST, OFF, L(10)]],
   ["Base", "Thanksgiving week", [REST, E(4), T(5, "3 mi"), E(3, 1), REST, R(2), L(11)]],
   ["Base", "Cutback + 10K test", [REST, E(3), OFF, E(3), REST, ["Time Trial", 8, "1 mi warm-up, 10K ALL-OUT time trial, cool-down. Enter your time in Stats."], R(5)]],
   ["Build", "Tempo build", [REST, E(5), T(6, "4 mi"), E(4), REST, OFF, L(12)]],
-  ["Build", "Speed", [REST, E(5), I(6, "6×800m (400m jog)"), E(5), REST, OFF, L(13)]],
+  ["Build", "Fartlek", [REST, E(5), F(6, "8×1 min"), E(5), REST, OFF, L(13)]],
   ["Build", "Holiday week", [REST, E(5), M(5, 3), E(4), REST, OFF, L(10)]],
   ["Build", "Tempo build", [REST, E(5), T(7, "2×2.5 mi (3 min jog)"), E(5), REST, OFF, L(14)]],
-  ["Build", "Speed + MP finish", [REST, E(6), I(7, "4×1 mi (3 min jog)"), E(5), REST, OFF, L(15, "easy, last 3 mi @ marathon pace")]],
+  ["Build", "Fartlek + MP finish", [REST, E(6), F(7, "6×2 min"), E(5), REST, OFF, L(15, "easy, last 3 mi @ marathon pace")]],
   ["Build", "Cutback + half test", [REST, E(4), E(4, 1), E(3), REST, OFF, ["Time Trial", 13.1, "Half marathon — race it or solo. Full race-morning routine. Enter your time in Stats."]]],
   ["Peak", "MP volume", [REST, E(6), M(7, 5), E(5), REST, R(2), L(16)]],
   ["Peak", "Tempo + 18", [REST, E(6), T(8, "3×2 mi (3 min jog)"), E(6), REST, OFF, L(18)]],
-  ["Peak", "Dress rehearsal", [REST, E(5), I(6, "5×1K (2 min jog)"), E(5), REST, R(2), L(14, "easy, last 8 mi @ marathon pace. Race shoes, kit, fuel.")]],
+  ["Peak", "Dress rehearsal", [REST, E(5), F(6, "5×3 min"), E(5), REST, R(2), L(14, "easy, last 8 mi @ marathon pace. Race shoes, kit, fuel.")]],
   ["Peak", "The 20-miler", [REST, E(6), M(8, 6), E(5), REST, OFF, L(20)]],
   ["Taper", "Taper 1", [REST, E(5), M(7, 5), E(5), REST, OFF, L(14)]],
   ["Taper", "Taper 2", [REST, E(5), M(6, 4), E(4), REST, OFF, L(10)]],
   ["Race", "RACE WEEK", [OFF, E(4, 1), ["MP", 3, "1 mi easy, 1 mi @ goal pace, 1 mi easy"], E(3), OFF, R(2), ["Race", 26.2, "LA MARATHON — Dodger Stadium → Century City. Start at your tier's pace, not faster."]]],
 ];
 
-const QUALITY = new Set(["Tempo", "Intervals", "MP", "Time Trial"]);
+const QUALITY = new Set(["Tempo", "Fartlek", "Intervals", "MP", "Time Trial"]);
 const WEEK_ICON = { 1: "🎯", 8: "🎯", 14: "🎯", 18: "⛰️", 21: "🏁" };
 
 // ---- dates (local, no TZ drift) ----------------------------------------
@@ -93,6 +98,10 @@ const DEFAULT_STATE = {
   checkpoints: { k5: null, k10: null, half: null },
   seenBadges: null, // null = first load: don't celebrate history
   lastLevel: null,
+  shields: {},   // date → reason ("Sick" | "Niggle" | "Life")
+  strength: [],  // dates a strength session was done
+  checks: {},    // date → { achilles: 0–10, arch: 0–10 }
+  shoe: { name: "", start: "2026-10-01" },
 };
 function loadState() {
   try {
@@ -126,7 +135,7 @@ function fitness(state) {
     needed: Object.fromEntries(Object.entries(CP).map(([k, mi]) => [k, riegel(state.goalSecs, MARATHON_MI, mi)])),
     zones: {
       Recovery: z(1.25, 1.35), Easy: z(1.13, 1.25), Long: z(1.08, 1.18),
-      MP: z(0.99, 1.01, Math.max(goalMp, mp)), Tempo: z(0.90, 0.93), Intervals: z(0.83, 0.86),
+      MP: z(0.99, 1.01, Math.max(goalMp, mp)), Tempo: z(0.90, 0.93), Fartlek: z(0.87, 0.93),
     },
   };
 }
@@ -151,8 +160,9 @@ function runsByDate(state) {
   }
   return m;
 }
-function dayStatus(p, byDate, today) {
+function dayStatus(p, byDate, today, shields = {}) {
   const a = byDate[p.date]?.miles || 0;
+  if (shields[p.date] && a < 0.9 * p.miles) return "shield";
   if (p.date > today) return "future";
   if (p.miles === 0) return a > 0 ? "bonus" : "rest";
   if (a >= 0.9 * p.miles) return "done";
@@ -162,21 +172,26 @@ function dayStatus(p, byDate, today) {
 function weekStats(state, today = todayKey()) {
   const byDate = runsByDate(state);
   return WEEKS.map(([phase, focus], wi) => {
-    const days = PLAN.filter((p) => p.week === wi + 1).map((p) => ({ ...p, actual: byDate[p.date]?.miles || 0, status: dayStatus(p, byDate, today) }));
+    const shields = state.shields || {};
+    const days = PLAN.filter((p) => p.week === wi + 1).map((p) => ({ ...p, actual: byDate[p.date]?.miles || 0, status: dayStatus(p, byDate, today, shields) }));
     const planned = days.reduce((s, d) => s + d.miles, 0);
+    // Shielded days are excused: their miles drop out of the target and they never block stars.
+    const target = days.reduce((s, d) => s + (d.status === "shield" ? 0 : d.miles), 0);
+    const shielded = days.some((d) => d.status === "shield");
     const actual = days.reduce((s, d) => s + d.actual, 0);
     const start = days[0].date, end = days[6].date;
     const state_ = today > end ? "past" : today >= start ? "current" : "future";
     const long = days.reduce((a, b) => (b.miles > a.miles ? b : a));
     const quality = days.filter((d) => QUALITY.has(d.type) || d.type === "Race");
-    const pct = planned ? actual / planned : 0;
+    const pct = target ? actual / target : 0;
+    const ok = (d) => d.status === "done" || d.status === "shield";
     let stars = 0;
-    if (state_ !== "future") {
+    if (state_ !== "future" && target > 0) {
       if (pct >= 0.7) stars = 1;
       if (pct >= 0.9) stars = 2;
-      if (pct >= 0.9 && long.status === "done" && quality.every((q) => q.status === "done")) stars = 3;
+      if (pct >= 0.9 && ok(long) && quality.every(ok)) stars = 3;
     }
-    return { week: wi + 1, phase, focus, days, planned, actual, pct, start, end, state: state_, stars, longDone: long.status === "done" };
+    return { week: wi + 1, phase, focus, days, planned, target, actual, pct, start, end, state: state_, stars, shielded, longDone: long.status === "done" };
   });
 }
 
@@ -194,7 +209,7 @@ const LEVELS = [
   [6000, "Beverly Hills", "Rodeo Drive-level fitness"],
   [8000, "Century City", "Finish line in sight"],
 ];
-const XP = { mile: 10, dayDone: 25, longBonus: 50, qualityBonus: 40, checkpoint: 100, perfectWeek: 100, crossTrain: 15 };
+const XP = { mile: 10, dayDone: 25, longBonus: 50, qualityBonus: 40, checkpoint: 100, perfectWeek: 100, crossTrain: 15, strength: 20, check: 5 };
 
 function computeXP(state) {
   const today = todayKey();
@@ -213,6 +228,8 @@ function computeXP(state) {
     if (w.stars === 3) xp += XP.perfectWeek;
   }
   xp += Object.values(state.checkpoints).filter(Boolean).length * XP.checkpoint;
+  xp += new Set(state.strength || []).size * XP.strength;
+  xp += Object.keys(state.checks || {}).length * XP.check;
   return xp;
 }
 function levelFor(xp) {
@@ -228,7 +245,7 @@ function weekStreak(weeks) {
   let streak = 0;
   const cur = weeks.find((w) => w.state === "current");
   const past = weeks.filter((w) => w.state === "past").reverse();
-  for (const w of past) { if (w.pct >= 0.8) streak++; else break; }
+  for (const w of past) { if (w.pct >= 0.8) streak++; else if (w.shielded) continue; else break; }
   if (cur && cur.pct >= 0.8) streak++;
   return streak;
 }
@@ -240,7 +257,7 @@ function badges(state) {
   const total = runs.reduce((s, r) => s + (+r.miles || 0), 0);
   const longest = runs.reduce((m, r) => Math.max(m, +r.miles || 0), 0);
   const weeks = weekStats(state);
-  const bestStreak = (() => { let b = 0, c = 0; for (const w of weeks.filter((w) => w.state !== "future")) { c = w.pct >= 0.8 ? c + 1 : 0; b = Math.max(b, c); } return b; })();
+  const bestStreak = (() => { let b = 0, c = 0; for (const w of weeks.filter((w) => w.state !== "future")) { c = w.pct >= 0.8 ? c + 1 : w.shielded ? c : 0; b = Math.max(b, c); } return b; })();
   const has = (pred) => runs.some(pred);
   const onDate = (...ds) => has((r) => ds.includes(r.date));
   const race = runs.find((r) => r.type === "Race" && r.miles >= 26);
@@ -248,7 +265,7 @@ function badges(state) {
   return [
     ["first", "👟", "First Steps", "Log your first run", runs.length > 0],
     ["baseline", "🎯", "Baseline", "Enter your Week 1 5K", !!c.k5],
-    ["quality", "⚡", "Speed Demon", "Log a tempo or interval run", has((r) => r.type === "Tempo" || r.type === "Intervals")],
+    ["quality", "⚡", "Speed Demon", "Log a tempo or fartlek run", has((r) => ["Tempo", "Fartlek", "Intervals"].includes(r.type))],
     ["ten", "🔟", "Double Digits", "Run 10+ miles", longest >= 10],
     ["half", "🌗", "Half Way There", "Run 13.1+ miles", longest >= 13.1],
     ["sixteen", "🧗", "Into the Deep", "Run 16+ miles", longest >= 16],
@@ -258,6 +275,9 @@ function badges(state) {
     ["c500", "🌅", "500 Club", "500 total miles", total >= 500],
     ["streak4", "🔥", "Hot Streak", "4-week streak", bestStreak >= 4],
     ["streak8", "☄️", "Unbreakable", "8-week streak", bestStreak >= 8],
+    ["strength16", "🦵", "Bulletproof", "16 strength sessions", new Set(state.strength || []).size >= 16],
+    ["checks14", "🩺", "Body Aware", "14 morning check-ins", Object.keys(state.checks || {}).length >= 14],
+    ["shield", "🛡️", "Smart Rest", "Take a shield day instead of running hurt", Object.keys(state.shields || {}).length > 0],
     ["cross10", "🚴", "Recovery Pro", "Log 10 cross-training days", crossDays >= 10],
     ["perfect", "⭐", "Perfect Week", "Earn 3 stars in a week", weeks.some((w) => w.stars === 3)],
     ["turkey", "🦃", "Turkey Burner", "Run on Thanksgiving", onDate("2026-11-26")],
@@ -268,4 +288,19 @@ function badges(state) {
     ["finisher", "🏅", "Marathoner", "Finish the LA Marathon", !!race],
     ["legend", "👑", "Sub-4 Legend", "Finish under 4:00:00", !!(race && race.secs && race.secs < 4 * 3600)],
   ].map(([id, icon, name, desc, earned]) => ({ id, icon, name, desc, earned }));
+}
+
+// ---- health -----------------------------------------------------------
+// Pain rules for Achilles / plantar fascia (0–10, morning first steps).
+function painAdvice(check) {
+  if (!check) return null;
+  const worst = Math.max(check.achilles ?? 0, check.arch ?? 0);
+  if (worst <= 3) return { level: "good", text: "Good to go. Run as planned, keep easy runs easy." };
+  if (worst <= 5) return { level: "warn", text: "Easy only today: swap any workout for an easy run or the bike. Stop if it climbs during the run." };
+  return { level: "bad", text: "Skip running today. Take a shield day — bike only if it's pain-free." };
+}
+const SHOE_LIMIT = 400;
+function shoeMiles(state) {
+  if (!state.shoe?.start) return 0;
+  return runsOnly(state).filter((r) => r.date >= state.shoe.start).reduce((s, r) => s + (+r.miles || 0), 0);
 }

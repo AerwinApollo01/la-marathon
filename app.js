@@ -2,16 +2,17 @@
 
 const TYPE_COLOR = {
   Rest: "var(--t-rest)", Easy: "var(--t-easy)", Recovery: "var(--t-recovery)", Long: "var(--t-long)",
-  Tempo: "var(--t-tempo)", Intervals: "var(--t-intervals)", MP: "var(--t-mp)", "Time Trial": "var(--t-tt)",
+  Tempo: "var(--t-tempo)", Fartlek: "var(--t-intervals)", Intervals: "var(--t-intervals)", MP: "var(--t-mp)", "Time Trial": "var(--t-tt)",
   Race: "var(--t-race)", "Cross-train": "#8C9AC4",
 };
 const TYPE_ICON = {
-  Rest: "😴", Easy: "🏃", Recovery: "🚶", Long: "🛣️", Tempo: "⚡", Intervals: "🔥", MP: "🎯",
+  Rest: "😴", Easy: "🏃", Recovery: "🚶", Long: "🛣️", Tempo: "⚡", Fartlek: "💨", Intervals: "🔥", MP: "🎯",
   "Time Trial": "⏱️", Race: "🏁", "Cross-train": "🚴",
 };
-const LOG_TYPES = ["Easy", "Long", "Tempo", "Intervals", "MP", "Recovery", "Time Trial", "Race", "Cross-train"];
+const LOG_TYPES = ["Easy", "Long", "Tempo", "Fartlek", "MP", "Recovery", "Time Trial", "Race", "Cross-train"];
 const EFFORT = ["", "Barely moving", "Very easy", "Easy", "Comfortable", "Steady", "Moderate", "Hard-ish", "Hard", "Very hard", "All-out"];
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const SHIELD_REASONS = [["Sick", "🤒"], ["Niggle", "🦶"], ["Life", "📅"]];
 
 let state = loadState();
 let tab = "today";
@@ -114,6 +115,7 @@ function viewToday() {
   } else {
     const done = byDate[today]?.miles || 0;
     const complete = p.miles > 0 && done >= 0.9 * p.miles;
+    const shield = state.shields?.[today];
     const pace = targetPace(p.type, fit);
     main = `
     <section class="card workout">
@@ -125,9 +127,11 @@ function viewToday() {
       <div style="margin-top:14px">
         ${complete
           ? `<div class="done-banner">✅ Done — ${fmtMi(done)} mi logged. Nice work.</div>`
+          : shield
+            ? `<div class="shield-banner"><span>🛡️ Shield day · ${esc(shield)}. Rest up — your streak is safe.</span><button class="btn small ghost" data-action="unshield">Undo</button></div>`
           : p.miles
             ? `<button class="btn" data-action="log-today">Log today's run</button>`
-            : `<p class="muted" style="font-size:14px">Recovery is training. Optional: 20 min strength — squats, lunges, calf raises, planks.</p>`}
+            : `<p class="muted" style="font-size:14px">Recovery is training. Easy bike at HR 100–115, then strength (log it below).</p>`}
       </div>
     </section>`;
   }
@@ -137,13 +141,13 @@ function viewToday() {
     <section class="card">
       <div class="row between" style="margin-bottom:12px">
         <div><div class="h2">This week</div><div class="muted" style="font-size:13px">${esc(w.focus)}</div></div>
-        <div class="right"><b class="num" style="font-size:20px">${fmtMi(w.actual)}</b><span class="muted num"> / ${fmtMi(w.planned)} mi</span></div>
+        <div class="right"><b class="num" style="font-size:20px">${fmtMi(w.actual)}</b><span class="muted num"> / ${fmtMi(w.target)} mi</span></div>
       </div>
       <div class="strip">
         ${w.days.map((d, i) => `
           <div class="dayc ${d.date === today ? "is-today" : ""}">
             <span>${DOW[i][0]}</span>
-            <div class="dot ${d.date === today && d.status !== "done" ? "today" : d.status}" title="${esc(d.type)}">${d.status === "done" ? "✓" : d.miles ? fmtMi(d.miles) : "–"}</div>
+            <div class="dot ${d.date === today && d.status !== "done" ? "today" : d.status}" title="${esc(d.type)}">${d.status === "done" ? "✓" : d.status === "shield" ? "🛡" : d.miles ? fmtMi(d.miles) : "–"}</div>
           </div>`).join("")}
       </div>
       <div class="progress" style="margin-top:14px"><i style="width:${Math.min(100, Math.round(w.pct * 100))}%"></i></div>
@@ -160,7 +164,41 @@ function viewToday() {
         <div class="sub">${esc(tomorrow.desc)}</div></div></div>
     </div></section>` : "";
 
-  return `${heroCard(xp, lvl, streak)}${main}${weekCard}${next}`;
+  return `${heroCard(xp, lvl, streak)}${p ? careCard(today, w) : ""}${main}${weekCard}${next}`;
+}
+
+function careCard(today, w) {
+  const check = state.checks?.[today];
+  const advice = painAdvice(check);
+  const v = check || { achilles: 0, arch: 0 };
+  const strengthWeek = w ? (state.strength || []).filter((d) => d >= w.start && d <= w.end).length : 0;
+  const didStrength = (state.strength || []).includes(today);
+  const slider = (key, label) => `
+    <div class="pain-row">
+      <span>${label}</span>
+      <input type="range" min="0" max="10" value="${v[key] ?? 0}" data-pain="${key}" aria-label="${label} pain 0 to 10" />
+      <b class="num pain-val" data-pain-val="${key}">${v[key] ?? 0}</b>
+    </div>`;
+  return `
+  <section class="card care">
+    <div class="row between" style="margin-bottom:8px">
+      <div><div class="h2">Morning check</div><div class="muted" style="font-size:12px">Pain on your first steps out of bed · 0–10</div></div>
+      ${check ? `<span class="chip" style="font-size:12px">✓ Logged</span>` : ""}
+    </div>
+    ${slider("achilles", "Achilles")}
+    ${slider("arch", "Arch / heel")}
+    ${advice
+      ? `<div class="advice ${advice.level}">${{ good: "✅", warn: "⚠️", bad: "🛑" }[advice.level]} ${esc(advice.text)}</div>`
+      : `<button class="btn ghost small" data-action="save-check" style="width:100%;margin-top:6px">Log check-in · +${XP.check} XP</button>`}
+    <div class="care-actions">
+      <button class="care-btn ${didStrength ? "on" : ""}" data-action="strength">
+        <span>💪</span><b>${didStrength ? "Strength done" : "Log strength"}</b><small>${strengthWeek}/2 this week</small>
+      </button>
+      <button class="care-btn ${state.shields?.[today] ? "on shield" : ""}" data-action="${state.shields?.[today] ? "unshield" : "shield"}">
+        <span>🛡️</span><b>${state.shields?.[today] ? "Shielded" : "Shield day"}</b><small>Sick or sore? Streak stays safe</small>
+      </button>
+    </div>
+  </section>`;
 }
 
 function viewJourney() {
@@ -258,6 +296,9 @@ function viewStats() {
       <div class="kpi"><b>${weeks.reduce((s, w) => s + w.stars, 0)}</b><span>Stars earned</span></div>
     </div>
 
+    ${healthCard()}
+    ${shoeCard()}
+
     <section class="card">
       <div class="row between" style="margin-bottom:10px">
         <div class="h2">Weekly miles</div>
@@ -290,6 +331,62 @@ function viewStats() {
       </div>
       <input type="file" id="import-file" accept="application/json" hidden />
     </section>`;
+}
+
+function healthCard() {
+  const today = parseDate(todayKey());
+  const days = Array.from({ length: 14 }, (_, i) => fmtKey(addDays(today, i - 13)));
+  const cell = (v) => v == null ? `<i class="hc none"></i>` : `<i class="hc ${v <= 3 ? "good" : v <= 5 ? "warn" : "bad"}">${v}</i>`;
+  const strengthCount = days.filter((d) => (state.strength || []).includes(d)).length;
+  return `
+    <section class="card">
+      <div class="row between" style="margin-bottom:10px">
+        <div class="h2">Body · last 14 days</div>
+        <span class="muted" style="font-size:12px">💪 ${strengthCount} strength · 🛡️ ${days.filter((d) => state.shields?.[d]).length} shield</span>
+      </div>
+      <div class="hgrid">
+        <span class="hl">Achilles</span>${days.map((d) => cell(state.checks?.[d]?.achilles)).join("")}
+        <span class="hl">Arch</span>${days.map((d) => cell(state.checks?.[d]?.arch)).join("")}
+        <span></span>${days.map((d, i) => `<span class="hd">${i % 7 === 6 || i === 13 ? parseDate(d).getDate() : ""}</span>`).join("")}
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:10px">0–3 fine · 4–5 easy only · 6+ no running. Two days in a row at 4+ → swap the next run for the bike.</p>
+    </section>`;
+}
+
+function shoeCard() {
+  const mi = shoeMiles(state);
+  const pct = Math.min(1, mi / SHOE_LIMIT);
+  const msg = mi >= 350 ? "Time to retire these — move to the next pair."
+    : mi >= 250 ? "Buy the next pair now and break them in alongside these."
+    : "Plenty of life left.";
+  return `
+    <section class="card">
+      <div class="h2" style="margin-bottom:10px">👟 Shoes</div>
+      <div class="grid2">
+        <div class="field"><label>Model</label><input class="input" data-shoe="name" placeholder="e.g. Hoka Clifton" value="${esc(state.shoe?.name)}" /></div>
+        <div class="field"><label>Started</label><input class="input" type="date" data-shoe="start" value="${esc(state.shoe?.start)}" /></div>
+      </div>
+      <div class="row between" style="margin:12px 0 6px"><b class="num">${fmtMi(mi)} / ${SHOE_LIMIT} mi</b><span class="muted" style="font-size:12px">${msg}</span></div>
+      <div class="progress"><i style="width:${Math.round(pct * 100)}%;background:${mi >= 350 ? "var(--bad)" : mi >= 250 ? "var(--warn)" : "var(--good)"}"></i></div>
+      <p class="muted" style="font-size:12px;margin-top:10px">Stick with the model that quieted your plantar fascia. Buy race-day shoes by early January so they're tested on the Week 14 half — no last-minute switch to a lower drop or carbon plate.</p>
+    </section>`;
+}
+
+function openShield() {
+  openSheet(`
+    <div class="celebrate" style="gap:8px">
+      <div class="em" style="font-size:56px">🛡️</div>
+      <div class="h2" style="font-size:20px">Take a shield day?</div>
+      <p class="muted" style="font-size:14px">Resting a niggle now beats losing three weeks later. Today's planned miles are excused and your streak pauses instead of breaking.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      ${SHIELD_REASONS.map(([r, em]) => `<button class="btn ghost" data-reason="${r}">${em} ${r === "Niggle" ? "Niggle / pain" : r === "Life" ? "Life happened" : r}</button>`).join("")}
+      <button class="btn ghost" data-action="close" style="opacity:.7">Cancel</button>
+    </div>`);
+  document.querySelectorAll("#sheet [data-reason]").forEach((b) => b.addEventListener("click", () => {
+    closeSheet();
+    commit(() => { state.shields = { ...(state.shields || {}), [todayKey()]: b.dataset.reason }; });
+  }));
 }
 
 function weeklyChart(weeks) {
@@ -347,6 +444,8 @@ function viewTrophies() {
         +${XP.longBonus} long-run bonus · +${XP.qualityBonus} workout bonus<br/>
         +${XP.perfectWeek} for a ⭐⭐⭐ week · +${XP.checkpoint} per checkpoint<br/>
         +${XP.crossTrain} per cross-training day (bike, etc.)<br/>
+        +${XP.strength} per strength session · +${XP.check} per morning check-in<br/>
+        🛡️ Shield days pause your streak instead of breaking it<br/>
         🔥 Streak = weeks in a row at ≥80% of planned miles
       </div>
     </section>`;
@@ -378,7 +477,7 @@ function openWeek(n) {
           <div class="ic" style="background:${TYPE_COLOR[d.type]}22">${TYPE_ICON[d.type]}</div>
           <div class="grow"><div class="title">${DOW[i]} ${prettyDate(d.date, { month: "short", day: "numeric" })} · ${d.miles ? fmtMi(d.miles) + " mi" : "Rest"}</div>
             <div class="sub" style="white-space:normal">${esc(d.desc)}${targetPace(d.type, fit) ? ` · <b style="color:var(--text)">${targetPace(d.type, fit)}</b>` : ""}</div></div>
-          <div class="right" style="font-size:18px">${{ done: "✅", partial: "🟡", missed: "❌", bonus: "⭐", today: "👉", rest: "", future: "" }[d.status]}</div>
+          <div class="right" style="font-size:18px">${{ done: "✅", partial: "🟡", missed: "❌", bonus: "⭐", today: "👉", rest: "", future: "", shield: "🛡️" }[d.status]}</div>
         </div>`).join("")}
     </div>
     <button class="btn ghost" style="margin-top:12px" data-action="close">Close</button>`);
@@ -527,6 +626,32 @@ function confetti() {
 // ======================================================================
 function bindView() {
   const view = $("#view");
+  const today = todayKey();
+  view.querySelectorAll("[data-pain]").forEach((inp) => {
+    inp.addEventListener("input", () => { view.querySelector(`[data-pain-val=${inp.dataset.pain}]`).textContent = inp.value; });
+    inp.addEventListener("change", () => {
+      if (!state.checks?.[today]) return; // first save goes through the button
+      commit(() => { state.checks[today] = { ...state.checks[today], [inp.dataset.pain]: +inp.value }; });
+    });
+  });
+  view.querySelector("[data-action=save-check]")?.addEventListener("click", () => {
+    const val = (k) => +view.querySelector(`[data-pain=${k}]`).value;
+    commit(() => { state.checks = { ...(state.checks || {}), [today]: { achilles: val("achilles"), arch: val("arch") } }; });
+  });
+  view.querySelector("[data-action=strength]")?.addEventListener("click", () => {
+    commit(() => {
+      const set = new Set(state.strength || []);
+      set.has(today) ? set.delete(today) : set.add(today);
+      state.strength = [...set];
+    });
+  });
+  view.querySelector("[data-action=shield]")?.addEventListener("click", openShield);
+  view.querySelectorAll("[data-action=unshield]").forEach((b) => b.addEventListener("click", () => {
+    commit(() => { const s = { ...(state.shields || {}) }; delete s[today]; state.shields = s; });
+  }));
+  view.querySelectorAll("[data-shoe]").forEach((inp) => inp.addEventListener("change", () => {
+    commit(() => { state.shoe = { ...(state.shoe || {}), [inp.dataset.shoe]: inp.value.trim() }; });
+  }));
   view.querySelector("[data-action=log-today]")?.addEventListener("click", () => openLog());
   view.querySelectorAll("[data-week]").forEach((b) => b.addEventListener("click", () => openWeek(+b.dataset.week)));
   view.querySelectorAll("[data-run]").forEach((b) => b.addEventListener("click", () => openLog(state.runs.find((r) => r.id === b.dataset.run))));

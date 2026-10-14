@@ -138,9 +138,14 @@ function targetPace(type, fit) {
 }
 
 // ---- progress ---------------------------------------------------------
+// Cross-training is logged in minutes and never counts toward running miles.
+const isCross = (r) => r.type === "Cross-train";
+const runsOnly = (state) => state.runs.filter((r) => !isCross(r));
+const crossOnly = (state) => state.runs.filter(isCross);
+
 function runsByDate(state) {
   const m = {};
-  for (const r of state.runs) {
+  for (const r of runsOnly(state)) {
     const e = (m[r.date] ||= { miles: 0, secs: 0, count: 0 });
     e.miles += +r.miles || 0; e.secs += +r.secs || 0; e.count++;
   }
@@ -189,14 +194,15 @@ const LEVELS = [
   [6000, "Beverly Hills", "Rodeo Drive-level fitness"],
   [8000, "Century City", "Finish line in sight"],
 ];
-const XP = { mile: 10, dayDone: 25, longBonus: 50, qualityBonus: 40, checkpoint: 100, perfectWeek: 100 };
+const XP = { mile: 10, dayDone: 25, longBonus: 50, qualityBonus: 40, checkpoint: 100, perfectWeek: 100, crossTrain: 15 };
 
 function computeXP(state) {
   const today = todayKey();
   let xp = 0;
   const log = [];
-  const miles = state.runs.reduce((s, r) => s + (+r.miles || 0), 0);
+  const miles = runsOnly(state).reduce((s, r) => s + (+r.miles || 0), 0);
   xp += Math.round(miles * XP.mile);
+  xp += new Set(crossOnly(state).map((r) => r.date)).size * XP.crossTrain; // once per day
   for (const w of weekStats(state, today)) {
     for (const d of w.days) {
       if (d.status !== "done") continue;
@@ -229,7 +235,8 @@ function weekStreak(weeks) {
 
 // ---- badges -----------------------------------------------------------
 function badges(state) {
-  const runs = state.runs;
+  const runs = runsOnly(state);
+  const crossDays = new Set(crossOnly(state).map((r) => r.date)).size;
   const total = runs.reduce((s, r) => s + (+r.miles || 0), 0);
   const longest = runs.reduce((m, r) => Math.max(m, +r.miles || 0), 0);
   const weeks = weekStats(state);
@@ -251,6 +258,7 @@ function badges(state) {
     ["c500", "🌅", "500 Club", "500 total miles", total >= 500],
     ["streak4", "🔥", "Hot Streak", "4-week streak", bestStreak >= 4],
     ["streak8", "☄️", "Unbreakable", "8-week streak", bestStreak >= 8],
+    ["cross10", "🚴", "Recovery Pro", "Log 10 cross-training days", crossDays >= 10],
     ["perfect", "⭐", "Perfect Week", "Earn 3 stars in a week", weeks.some((w) => w.stars === 3)],
     ["turkey", "🦃", "Turkey Burner", "Run on Thanksgiving", onDate("2026-11-26")],
     ["holiday", "🎄", "Holiday Hero", "Run on Christmas Eve or Day", onDate("2026-12-24", "2026-12-25")],

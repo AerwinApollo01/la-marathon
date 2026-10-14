@@ -191,26 +191,31 @@ function viewJourney() {
 
 function viewRuns() {
   const runs = [...state.runs].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  const total = runs.reduce((s, r) => s + (+r.miles || 0), 0);
+  const total = runsOnly(state).reduce((s, r) => s + (+r.miles || 0), 0);
+  const nRuns = runsOnly(state).length;
+  const xMins = crossOnly(state).reduce((s, r) => s + (r.secs || 0) / 60, 0);
   const items = runs.map((r) => {
     const wk = PLAN_BY_DATE[r.date]?.week;
+    const right = isCross(r)
+      ? `<b>${Math.round((r.secs || 0) / 60)} min</b><div class="muted" style="font-size:13px">${r.hr ? `${r.hr} bpm` : ""}</div>`
+      : `<b>${fmtMi(r.miles)} mi</b><div class="muted" style="font-size:13px">${r.secs && r.miles ? fmtPace(r.secs / r.miles) + "/mi" : ""}</div>`;
     return `
     <button class="li" data-run="${r.id}">
       <div class="ic" style="background:${TYPE_COLOR[r.type] || "#888"}22">${TYPE_ICON[r.type] || "🏃"}</div>
       <div class="grow"><div class="title">${esc(r.type === "MP" ? "Marathon pace" : r.type)}</div>
         <div class="sub">${prettyDate(r.date)}${wk ? ` · Wk ${wk}` : ""}${r.effort ? ` · RPE ${r.effort}` : ""}${r.notes ? ` · ${esc(r.notes)}` : ""}</div></div>
-      <div class="right"><b>${fmtMi(r.miles)} mi</b><div class="muted" style="font-size:13px">${r.secs && r.miles ? fmtPace(r.secs / r.miles) + "/mi" : ""}</div></div>
+      <div class="right">${right}</div>
     </button>`;
   }).join("");
   return `
-    <div><div class="eyebrow">Run log</div><div class="h1 num">${fmtMi(total)} miles</div><div class="muted">${runs.length} runs logged</div></div>
+    <div><div class="eyebrow">Run log</div><div class="h1 num">${fmtMi(total)} miles</div><div class="muted">${nRuns} runs${xMins ? ` · ${Math.round(xMins)} min cross-training` : ""}</div></div>
     <section class="card flush"><div class="list">${items || `<div class="li muted">No runs yet — tap ＋ to log one.</div>`}</div></section>`;
 }
 
 function viewStats() {
   const fit = fitness(state);
   const weeks = weekStats(state);
-  const runs = state.runs;
+  const runs = runsOnly(state);
   const total = runs.reduce((s, r) => s + (+r.miles || 0), 0);
   const longest = runs.reduce((m, r) => Math.max(m, +r.miles || 0), 0);
   const tiers = [["A", "Stretch", state.goalSecs], ["B", "Realistic", state.tierB], ["C", "Floor", state.tierC]];
@@ -341,6 +346,7 @@ function viewTrophies() {
         +${XP.mile} per mile · +${XP.dayDone} for hitting a planned run<br/>
         +${XP.longBonus} long-run bonus · +${XP.qualityBonus} workout bonus<br/>
         +${XP.perfectWeek} for a ⭐⭐⭐ week · +${XP.checkpoint} per checkpoint<br/>
+        +${XP.crossTrain} per cross-training day (bike, etc.)<br/>
         🔥 Streak = weeks in a row at ≥80% of planned miles
       </div>
     </section>`;
@@ -381,60 +387,82 @@ function openWeek(n) {
 function openLog(run, preset) {
   const today = todayKey();
   const plan = PLAN_BY_DATE[today];
+  const defaultType = plan && plan.miles ? plan.type : plan ? "Cross-train" : "Easy"; // rest day → bike
   const r = run || {
     date: preset?.date || today,
-    type: preset?.type || (plan && plan.miles ? plan.type : "Easy"),
+    type: preset?.type || defaultType,
     miles: preset?.miles ?? (plan && plan.miles ? plan.miles : ""),
-    secs: null, effort: 4, notes: "",
+    secs: null, hr: null, effort: defaultType === "Cross-train" ? 2 : 4, notes: "",
   };
-  const h = r.secs ? Math.floor(r.secs / 3600) : "", m = r.secs ? Math.floor((r.secs % 3600) / 60) : "", s = r.secs ? r.secs % 60 : "";
+  const cross0 = r.type === "Cross-train";
+  const h = r.secs && !cross0 ? Math.floor(r.secs / 3600) : "", m = r.secs && !cross0 ? Math.floor((r.secs % 3600) / 60) : "", s = r.secs && !cross0 ? r.secs % 60 : "";
   openSheet(`
-    <div class="h2" style="font-size:20px;margin-bottom:14px">${run ? "Edit run" : "Log a run"}</div>
+    <div class="h2" style="font-size:20px;margin-bottom:14px">${run ? "Edit" : "Log activity"}</div>
     <form id="log-form" style="display:flex;flex-direction:column;gap:14px">
       <div class="types" role="radiogroup">${LOG_TYPES.map((t) => `<button type="button" data-type="${t}" class="${t === r.type ? "on" : ""}">${TYPE_ICON[t]} ${t === "MP" ? "Marathon pace" : t}</button>`).join("")}</div>
-      <div class="grid2">
-        <div class="field"><label for="f-date">Date</label><input id="f-date" class="input" type="date" value="${r.date}" required /></div>
-        <div class="field"><label for="f-miles">Miles</label><input id="f-miles" class="input num" type="number" inputmode="decimal" step="0.01" min="0" value="${r.miles}" required /></div>
-      </div>
-      <div class="field"><label>Time (h : m : s)</label>
-        <div class="row" style="gap:6px">
-          <input id="f-h" class="input num" type="number" inputmode="numeric" min="0" placeholder="h" value="${h}" style="text-align:center" />
-          <b>:</b><input id="f-m" class="input num" type="number" inputmode="numeric" min="0" max="59" placeholder="min" value="${m}" style="text-align:center" />
-          <b>:</b><input id="f-s" class="input num" type="number" inputmode="numeric" min="0" max="59" placeholder="sec" value="${s}" style="text-align:center" />
+      <div class="field"><label for="f-date">Date</label><input id="f-date" class="input" type="date" value="${r.date}" required /></div>
+      <div id="run-fields" style="display:flex;flex-direction:column;gap:14px">
+        <div class="field"><label for="f-miles">Miles</label><input id="f-miles" class="input num" type="number" inputmode="decimal" step="0.01" min="0" value="${cross0 ? "" : r.miles}" /></div>
+        <div class="field"><label>Time (h : m : s)</label>
+          <div class="row" style="gap:6px">
+            <input id="f-h" class="input num" type="number" inputmode="numeric" min="0" placeholder="h" value="${h}" style="text-align:center" />
+            <b>:</b><input id="f-m" class="input num" type="number" inputmode="numeric" min="0" max="59" placeholder="min" value="${m}" style="text-align:center" />
+            <b>:</b><input id="f-s" class="input num" type="number" inputmode="numeric" min="0" max="59" placeholder="sec" value="${s}" style="text-align:center" />
+          </div>
+          <div class="pace-live" id="pace-live">Pace: <b>—</b></div>
         </div>
-        <div class="pace-live" id="pace-live">Pace: <b>—</b></div>
+      </div>
+      <div id="cross-fields" class="grid2">
+        <div class="field"><label for="f-min">Minutes</label><input id="f-min" class="input num" type="number" inputmode="numeric" min="1" value="${cross0 && r.secs ? Math.round(r.secs / 60) : ""}" placeholder="30" /></div>
+        <div class="field"><label for="f-hr">Avg HR</label><input id="f-hr" class="input num" type="number" inputmode="numeric" min="40" max="220" value="${r.hr ?? ""}" placeholder="bpm" /></div>
+        <div class="pace-live" id="hr-live" style="grid-column:1/-1"></div>
       </div>
       <div class="field"><label for="f-effort">Effort · <span id="effort-lbl">${r.effort || 4} — ${EFFORT[r.effort || 4]}</span></label>
         <input id="f-effort" type="range" min="1" max="10" value="${r.effort || 4}" /></div>
       <div class="field"><label for="f-notes">Notes</label><input id="f-notes" class="input" placeholder="How did it feel? Route? Shoes?" value="${esc(r.notes)}" /></div>
-      <button class="btn" type="submit">${run ? "Save changes" : "Save run  🎉"}</button>
-      ${run ? `<button class="btn danger" type="button" data-action="delete">Delete run</button>` : ""}
+      <button class="btn" type="submit">${run ? "Save changes" : "Save  🎉"}</button>
+      ${run ? `<button class="btn danger" type="button" data-action="delete">Delete</button>` : ""}
     </form>`);
 
   let type = r.type;
   const form = $("#log-form");
+  const isX = () => type === "Cross-train";
   const secsNow = () => (+$("#f-h").value || 0) * 3600 + (+$("#f-m").value || 0) * 60 + (+$("#f-s").value || 0);
-  const updatePace = () => {
+  const update = () => {
+    $("#run-fields").hidden = isX();
+    $("#cross-fields").hidden = !isX();
+    $("#run-fields").style.display = isX() ? "none" : "flex";
+    $("#cross-fields").style.display = isX() ? "grid" : "none";
+    $("#f-miles").required = !isX();
+    $("#f-min").required = isX();
     const mi = parseFloat($("#f-miles").value), sec = secsNow();
     $("#pace-live").innerHTML = `Pace: <b>${mi > 0 && sec > 0 ? fmtPace(sec / mi) + " /mi" : "—"}</b>`;
+    const hr = +$("#f-hr").value;
+    $("#hr-live").innerHTML = !hr ? "Recovery band: <b>100–115 bpm</b> · +" + XP.crossTrain + " XP (once per day)"
+      : hr <= 115 ? "✅ <b>In your recovery band</b> — true active flush"
+      : "⚠️ <b>Above 115</b> — that's a workout, not recovery. Ease off next time.";
   };
-  form.addEventListener("input", updatePace);
-  updatePace();
+  form.addEventListener("input", update);
+  update();
   form.querySelectorAll("[data-type]").forEach((b) => b.addEventListener("click", () => {
     type = b.dataset.type;
     form.querySelectorAll("[data-type]").forEach((x) => x.classList.toggle("on", x === b));
+    update();
   }));
   $("#f-effort").addEventListener("input", (e) => { $("#effort-lbl").textContent = `${e.target.value} — ${EFFORT[e.target.value]}`; });
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const miles = parseFloat($("#f-miles").value);
-    if (!(miles >= 0)) return;
-    const entry = {
-      id: run?.id || `r${Date.now()}`,
-      date: $("#f-date").value, type, miles,
-      secs: secsNow() || null,
-      effort: +$("#f-effort").value, notes: $("#f-notes").value.trim(),
-    };
+    let entry;
+    const base = { id: run?.id || `r${Date.now()}`, date: $("#f-date").value, type, effort: +$("#f-effort").value, notes: $("#f-notes").value.trim() };
+    if (isX()) {
+      const mins = parseFloat($("#f-min").value);
+      if (!(mins > 0)) return;
+      entry = { ...base, miles: 0, secs: Math.round(mins * 60), hr: +$("#f-hr").value || null };
+    } else {
+      const miles = parseFloat($("#f-miles").value);
+      if (!(miles >= 0)) return;
+      entry = { ...base, miles, secs: secsNow() || null, hr: null };
+    }
     closeSheet();
     commit(() => {
       if (run) state.runs = state.runs.map((x) => (x.id === run.id ? entry : x));
@@ -442,7 +470,7 @@ function openLog(run, preset) {
     });
   });
   form.querySelector("[data-action=delete]")?.addEventListener("click", () => {
-    if (!confirm("Delete this run?")) return;
+    if (!confirm("Delete this entry?")) return;
     closeSheet();
     commit(() => { state.runs = state.runs.filter((x) => x.id !== run.id); });
   });

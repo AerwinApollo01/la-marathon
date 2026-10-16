@@ -23,7 +23,7 @@ const L = (n, extra) => {
 };
 
 const WEEKS = [
-  ["Base", "Getting started", [OFF, E(4), OFF, E(3), OFF, ["Easy", 4, "4 mi easy, last mile at a steady, comfortably firm effort (~6/10) — a gentle first taste of faster running"], L(5)]],
+  ["Base", "Getting started", [OFF, E(4), OFF, E(3), OFF, ["Easy", 4, "4 mi easy, last mile at a steady, comfortably firm effort (~6/10) — a gentle first taste of faster running"], L(7)]],
   ["Base", "Wake up speed", [REST, E(4), E(3, 1), E(3, 1), REST, OFF, L(7)]],
   ["Base", "Wake up speed", [REST, E(4), E(4, 1), E(3, 1), REST, OFF, L(8)]],
   ["Base", "Cutback + 5K test", [REST, E(3), E(3, 1), OFF, REST, ["Time Trial", 4, "1 mi warm-up + Achilles prep (2×15 slow calf raises, 4 building strides), then 5K at 8–9/10 effort — not all-out. Any Achilles/arch pain over 3/10 → make it an easy run and retest later. Enter your time in Stats."], L(5)]],

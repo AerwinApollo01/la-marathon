@@ -92,6 +92,7 @@ const DEFAULT_STATE = {
   runs: [
     { id: "seed1", date: "2026-10-11", type: "Long", miles: 6.5, secs: 5400, effort: null, notes: "From spreadsheet" },
     { id: "seed2", date: "2026-10-13", type: "Easy", miles: 4, secs: 3600, effort: null, notes: "From spreadsheet" },
+    { id: "seed3", date: "2026-10-15", type: "Easy", miles: 4.39, secs: 3579, hr: 137, effort: 3, notes: "96% Zone 2, cadence 155. Planned 3." },
   ],
   goalSecs: 4 * 3600,
   tierB: 4.5 * 3600,

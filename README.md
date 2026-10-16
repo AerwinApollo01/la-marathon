@@ -5,6 +5,9 @@ A gamified training app (PWA) for the **LA Marathon — Sunday, March 7, 2027**.
 21-week plan (Oct 12, 2026 → race day) with XP, levels named after the course
 (Dodger Stadium → Century City), weekly stars, streaks, and badges.
 
+**Live app:** https://aerwinapollo01.github.io/la-marathon/
+**📱 Using it on your phone:** see [docs/phone-guide.md](docs/phone-guide.md)
+
 ## Run locally
 
 ```bash
